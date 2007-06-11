@@ -18,25 +18,27 @@
 #
 ##
 
-## configuration
+# plugin.info file contents
+# 
+# PLUGIN = foo
+# PKG_DEP = pango
+# LDFLAGS_ADD = -lGLU
+# CFLAGS_ADD = -I/usr/include/foo
+#
 
-#enter plugin name here
-PLUGIN = snow
+#load config file
+include plugin.info
 
-#enter dependencies here
-PKG_DEP =
-
-## end of configuration
-
-#enter beryl or compiz here
-TARGET = compiz
 
 ifeq ($(BUILD_GLOBAL),true)
+	PREFIX = $(shell pkg-config --variable=prefix compiz)
+	CLIBDIR = $(shell pkg-config --variable=libdir compiz)
+	PKGDIR = $(CLIBDIR)/pkgconfig
     DESTDIR = $(shell pkg-config --variable=libdir compiz)/compiz
     XMLDIR = $(shell pkg-config --variable=prefix compiz)/share/compiz
 else
-    DESTDIR = $(HOME)/.$(TARGET)/plugins
-    XMLDIR = $(HOME)/.$(TARGET)/metadata
+    DESTDIR = $(HOME)/.compiz/plugins
+    XMLDIR = $(HOME)/.compiz/metadata
 endif
 
 BUILDDIR = build
@@ -47,8 +49,8 @@ INSTALL   = install
 
 BCOP       = `pkg-config --variable=bin bcop`
 
-CFLAGS  = -g -Wall `pkg-config --cflags $(PKG_DEP) $(TARGET) `
-LDFLAGS = `pkg-config --libs $(PKG_DEP) $(TARGET) `
+CFLAGS  = -g -Wall `pkg-config --cflags $(PKG_DEP) compiz ` $(CFLAGS_ADD)
+LDFLAGS = `pkg-config --libs $(PKG_DEP) compiz ` $(LDFLAGS_ADD)
 
 is-bcop-target := $(shell if [ -e $(PLUGIN).xml ]; then cat $(PLUGIN).xml | grep "useBcop=\"true\"";fi )
 
@@ -59,6 +61,11 @@ bcop-target-hdr := $(shell if [ -n "$(is-bcop-target)" ]; then echo $(BUILDDIR)/
 gen-schemas := $(shell if [ -e $(PLUGIN).xml ] && [ -n `pkg-config --variable=xsltdir compiz-gconf` ]; then echo true; fi )
 schema-target := $(shell if [ -n "$(gen-schemas)" ]; then echo $(PLUGIN).xml; fi )
 schema-output := $(shell if [ -n "$(gen-schemas)" ]; then echo $(BUILDDIR)/compiz-$(PLUGIN).schema; fi )
+
+ifeq ($(BUILD_GLOBAL),true)
+    pkg-target := $(shell if [ -e compiz-$(PLUGIN).pc.in -a -n "$(PREFIX)" -a -d "$(PREFIX)" ]; then echo "$(BUILDDIR)/compiz-$(PLUGIN).pc"; fi )
+    hdr-install-target := $(shell if [ -e compiz-$(PLUGIN).pc.in -a -n "$(PREFIX)" -a -d "$(PREFIX)" -a -e $(PLUGIN).h ]; then echo "$(PLUGIN).h"; fi )
+endif
 
 # find all the object files (including those from .moc.cpp files)
 
@@ -78,9 +85,9 @@ color := $(shell if [ $$TERM = "dumb" ]; then echo "no"; else echo "yes"; fi)
 # Do it.
 #
 
-.PHONY: $(BUILDDIR) build-dir bcop-build schema-creation c-build-objs c-link-plugin
+.PHONY: $(BUILDDIR) build-dir bcop-build pkg-creation schema-creation c-build-objs c-link-plugin
 
-all: $(BUILDDIR) build-dir bcop-build schema-creation c-build-objs c-link-plugin
+all: $(BUILDDIR) build-dir bcop-build pkg-creation schema-creation c-build-objs c-link-plugin
 
 bcop-build:   $(bcop-target-hdr) $(bcop-target-src)
 
@@ -89,6 +96,8 @@ schema-creation: $(schema-output)
 c-build-objs: $(all-c-objs)
 
 c-link-plugin: $(BUILDDIR)/lib$(PLUGIN).la
+
+pkg-creation: $(pkg-target)
 
 #
 # Create build directory
@@ -130,7 +139,7 @@ $(BUILDDIR)/%_options.c: %.xml
 
 $(BUILDDIR)/compiz-%.schema: %.xml
 	@if [ '$(color)' != 'no' ]; then \
-		echo -e -n "\033[0;1;5mschema    \033[0;1;37m: \033[0;32m$< \033[0;1;37m-> \033[0;31m$@\033[0m"; \
+		echo -e -n "\033[0;1;5mschema'ing\033[0;1;37m: \033[0;32m$< \033[0;1;37m-> \033[0;31m$@\033[0m"; \
 	else \
 		echo "schema'ing  $<  ->  $@"; \
 	fi
@@ -139,7 +148,24 @@ $(BUILDDIR)/compiz-%.schema: %.xml
 		echo -e "\r\033[0mschema    : \033[34m$< -> $@\033[0m"; \
 	fi
 
+#
+# pkg config file generation
 
+$(BUILDDIR)/compiz-%.pc: compiz-%.pc.in
+	@if [ '$(color)' != 'no' ]; then \
+		echo -e -n "\033[0;1;5mpkgconfig \033[0;1;37m: \033[0;32m$< \033[0;1;37m-> \033[0;31m$@\033[0m"; \
+	else \
+		echo "pkgconfig   $<  ->  $@"; \
+	fi
+	@COMPIZREQUIRES=`cat $(PKGDIR)/compiz.pc | grep Requires | sed -e 's;Requires: ;;g'`; \
+    COMPIZCFLAGS=`cat $(PKGDIR)/compiz.pc | grep Cflags | sed -e 's;Cflags: ;;g'`; \
+    sed -e 's;@prefix@;$(PREFIX);g' -e 's;\@libdir@;$(CLIBDIR);g' \
+        -e 's;@includedir@;$(PREFIX)/include;g' -e 's;\@VERSION@;0.0.1;g' \
+        -e "s;@COMPIZ_REQUIRES@;$$COMPIZREQUIRES;g" \
+        -e "s;@COMPIZ_CFLAGS@;$$COMPIZCFLAGS;g" $< > $@;
+	@if [ '$(color)' != 'no' ]; then \
+		echo -e "\r\033[0mpkgconfig : \033[34m$< -> $@\033[0m"; \
+	fi
 
 #
 # Compiling
@@ -210,6 +236,28 @@ install: $(DESTDIR) all
 	    cp $(PLUGIN).xml $(XMLDIR)/$(PLUGIN).xml; \
 	    if [ '$(color)' != 'no' ]; then \
 		echo -e "\r\033[0minstall   : \033[34m$(XMLDIR)/$(PLUGIN).xml\033[0m"; \
+	    fi; \
+	fi
+	@if [ -n "$(hdr-install-target)" ]; then \
+	    if [ '$(color)' != 'no' ]; then \
+		echo -n -e "\033[0;1;5minstall   \033[0;1;37m: \033[0;31m$(PREFIX)/include/$(hdr-install-target)\033[0m"; \
+	    else \
+		echo "install   : $(PREFIX)/include/$(hdr-install-target)"; \
+	    fi; \
+	    cp $(hdr-install-target) $(PREFIX)/include/$(hdr-install-target); \
+	    if [ '$(color)' != 'no' ]; then \
+		echo -e "\r\033[0minstall   : \033[34m$(PREFIX)/include/$(hdr-install-target)\033[0m"; \
+	    fi; \
+	fi
+	@if [ -n "$(pkg-target)" ]; then \
+	    if [ '$(color)' != 'no' ]; then \
+		echo -n -e "\033[0;1;5minstall   \033[0;1;37m: \033[0;31m$(PKGDIR)/compiz-$(PLUGIN).pc\033[0m"; \
+	    else \
+		echo "install   : $(PKGDIR)/compiz-$(PLUGIN).pc"; \
+	    fi; \
+	    cp $(pkg-target) $(PKGDIR)/compiz-$(PLUGIN).pc; \
+	    if [ '$(color)' != 'no' ]; then \
+		echo -e "\r\033[0minstall   : \033[34m$(PKGDIR)/compiz-$(PLUGIN).pc\033[0m"; \
 	    fi; \
 	fi
 	@if [ -e $(schema-output) ]; then \
