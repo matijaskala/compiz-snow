@@ -33,6 +33,7 @@ include plugin.info
 ifeq ($(BUILD_GLOBAL),true)
 	PREFIX = $(shell pkg-config --variable=prefix compiz)
 	CLIBDIR = $(shell pkg-config --variable=libdir compiz)
+	CINCDIR = $(shell pkg-config --variable=includedir compiz)
 	PKGDIR = $(CLIBDIR)/pkgconfig
     DESTDIR = $(shell pkg-config --variable=libdir compiz)/compiz
     XMLDIR = $(shell pkg-config --variable=prefix compiz)/share/compiz
@@ -160,7 +161,7 @@ $(BUILDDIR)/compiz-%.pc: compiz-%.pc.in
 	@COMPIZREQUIRES=`cat $(PKGDIR)/compiz.pc | grep Requires | sed -e 's;Requires: ;;g'`; \
     COMPIZCFLAGS=`cat $(PKGDIR)/compiz.pc | grep Cflags | sed -e 's;Cflags: ;;g'`; \
     sed -e 's;@prefix@;$(PREFIX);g' -e 's;\@libdir@;$(CLIBDIR);g' \
-        -e 's;@includedir@;$(PREFIX)/include;g' -e 's;\@VERSION@;0.0.1;g' \
+        -e 's;@includedir@;$(CINCDIR);g' -e 's;\@VERSION@;0.0.1;g' \
         -e "s;@COMPIZ_REQUIRES@;$$COMPIZREQUIRES;g" \
         -e "s;@COMPIZ_CFLAGS@;$$COMPIZCFLAGS;g" $< > $@;
 	@if [ '$(color)' != 'no' ]; then \
@@ -240,13 +241,13 @@ install: $(DESTDIR) all
 	fi
 	@if [ -n "$(hdr-install-target)" ]; then \
 	    if [ '$(color)' != 'no' ]; then \
-		echo -n -e "\033[0;1;5minstall   \033[0;1;37m: \033[0;31m$(PREFIX)/include/$(hdr-install-target)\033[0m"; \
+		echo -n -e "\033[0;1;5minstall   \033[0;1;37m: \033[0;31m$(CINCDIR)/compiz/$(hdr-install-target)\033[0m"; \
 	    else \
-		echo "install   : $(PREFIX)/include/$(hdr-install-target)"; \
+		echo "install   : $(CINCDIR)/compiz/$(hdr-install-target)"; \
 	    fi; \
-	    cp $(hdr-install-target) $(PREFIX)/include/$(hdr-install-target); \
+	    cp $(hdr-install-target) $(CINCDIR)/compiz/$(hdr-install-target); \
 	    if [ '$(color)' != 'no' ]; then \
-		echo -e "\r\033[0minstall   : \033[34m$(PREFIX)/include/$(hdr-install-target)\033[0m"; \
+		echo -e "\r\033[0minstall   : \033[34m$(CINCDIR)/compiz/$(hdr-install-target)\033[0m"; \
 	    fi; \
 	fi
 	@if [ -n "$(pkg-target)" ]; then \
