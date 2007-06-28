@@ -2,7 +2,7 @@
 <compiz>
   <plugin name="snow" useBcop="true">
     <_short>Snow</_short>
-    <_long>XSnow for Compiz</_long>
+    <_long>Snow for Compiz</_long>
 	<category>Extras</category>
     <display>
       <group>
