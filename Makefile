@@ -80,6 +80,9 @@ endif
 c-objs     := $(patsubst %.c,%.lo,$(shell find -name '*.c' 2> /dev/null | grep -v "$(BUILDDIR)/" | sed -e 's/^.\///'))
 c-objs     := $(filter-out $(bcop-target-src:.c=.lo),$(c-objs))
 
+h-files    := $(shell find -name '*.h' 2> /dev/null | grep -v "$(BUILDDIR)/" | sed -e 's/^.\///')
+h-files    += $(bcop-target-hdr)
+
 all-c-objs := $(addprefix $(BUILDDIR)/,$(c-objs)) 
 all-c-objs += $(bcop-target-src:.c=.lo)
 
@@ -213,7 +216,7 @@ $(BUILDDIR)/compiz-%.pc: compiz-%.pc.in
 # Compiling
 #
 
-$(BUILDDIR)/%.lo: %.c
+$(BUILDDIR)/%.lo: %.c $(h-files)
 	@if [ '$(color)' != 'no' ]; then \
 		$(ECHO) -n -e "\033[0;1;5mcompiling \033[0m: \033[0;32m$< \033[0m-> \033[0;31m$@\033[0m"; \
 	else \
@@ -224,7 +227,7 @@ $(BUILDDIR)/%.lo: %.c
 		$(ECHO) -e "\r\033[0mcompiling : \033[34m$< -> $@\033[0m"; \
 	fi
 
-$(BUILDDIR)/%.lo: $(BUILDDIR)/%.c
+$(BUILDDIR)/%.lo: $(BUILDDIR)/%.c $(h-files)
 	@if [ '$(color)' != 'no' ]; then \
 		$(ECHO) -n -e "\033[0;1;5mcompiling \033[0m: \033[0;32m$< \033[0m-> \033[0;31m$@\033[0m"; \
 	else \
@@ -242,7 +245,7 @@ $(BUILDDIR)/%.lo: $(BUILDDIR)/%.c
 
 cxx-rpath-prefix := -Wl,-rpath,
 
-$(BUILDDIR)/lib$(PLUGIN).la: $(addprefix $(BUILDDIR)/,$(c-objs))
+$(BUILDDIR)/lib$(PLUGIN).la: $(all-c-objs)
 	@if [ '$(color)' != 'no' ]; then \
 		$(ECHO) -e -n "\033[0;1;5mlinking   \033[0m: \033[0;31m$@\033[0m"; \
 	else \
