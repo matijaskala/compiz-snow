@@ -1,3 +1,6 @@
-include (CompizFusion)
+find_package (Compiz REQUIRED)
 
-compiz_fusion_plugin (snow)
+include (CompizPlugin)
+
+compiz_plugin (snow PLUGINDEPS composite opengl)
+

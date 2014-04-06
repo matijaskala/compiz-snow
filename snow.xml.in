@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <compiz>
 	<plugin name="snow" useBcop="true">
 		<_short>Snow</_short>
@@ -6,12 +6,16 @@
 		<category>Extras</category>
 		<deps>
 			<relation type="after">
-				<plugin>png</plugin>
-				<plugin>svg</plugin>
-				<plugin>jpeg</plugin>
+				<plugin>imgpng</plugin>
+				<plugin>imgsvg</plugin>
+				<plugin>imgjpeg</plugin>
 			</relation>
+			<requirement>
+				<plugin>composite</plugin>
+				<plugin>opengl</plugin>
+			</requirement>
 		</deps>
-		<display>
+		<options>
 			<group>
 				<_short>Settings</_short>
 				<option name="num_snowflakes" type="int">
@@ -124,7 +128,7 @@
 					<default>&lt;Super&gt;F3</default>
 				</option>
 			</group>
-		</display>
+		</options>
 	</plugin>
 </compiz>
 
